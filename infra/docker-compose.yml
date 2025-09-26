@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:14
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: effectivedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    restart: always
+    env_file:
+      - ../src/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    # volumes:
+    #   - ../src:/app
+
+volumes:
+  postgres_data:
