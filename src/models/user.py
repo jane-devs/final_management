@@ -1,5 +1,5 @@
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import Column, String, Enum, ForeignKey, Integer, DateTime, func, MetaData
+from sqlalchemy import Column, String, Enum, ForeignKey, Integer, DateTime, func
 from sqlalchemy.orm import relationship
 import enum
 
@@ -16,11 +16,9 @@ class UserRole(enum.Enum):
 class User(Base, SQLAlchemyBaseUserTableUUID):
     """
     Модель пользователя системы, совместимая с FastAPI Users.
-    Наследуется от SQLAlchemyBaseUserTable для интеграции с FastAPI Users.
     """
     __tablename__ = "users"
 
-    # Дополнительные поля (базовые поля id, email, hashed_password, is_active, is_superuser, is_verified наследуются от SQLAlchemyBaseUserTable)
     first_name = Column(
         String(100),
         nullable=False,
@@ -42,8 +40,6 @@ class User(Base, SQLAlchemyBaseUserTableUUID):
         nullable=True,
         comment="ID команды"
     )
-
-    # Временные метки (добавляем вручную, так как SQLAlchemyBaseUserTable их не включает)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -55,7 +51,6 @@ class User(Base, SQLAlchemyBaseUserTableUUID):
         onupdate=func.now(),
         comment="Дата обновления"
     )
-
     team = relationship("Team", back_populates="members")
     created_tasks = relationship(
         "Task",
