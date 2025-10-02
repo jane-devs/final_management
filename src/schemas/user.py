@@ -1,6 +1,5 @@
-# app/schemas/user.py
 from fastapi_users import schemas
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 import uuid
 from models.user import UserRole
@@ -12,6 +11,7 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     last_name: str
     role: UserRole
     team_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
     @property
     def full_name(self) -> str:
@@ -22,8 +22,6 @@ class UserCreate(schemas.BaseUserCreate):
     """Схема создания пользователя."""
     first_name: str
     last_name: str
-    role: UserRole = UserRole.USER
-    team_id: Optional[int] = None
 
 
 class UserUpdate(schemas.BaseUserUpdate):

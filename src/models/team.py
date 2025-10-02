@@ -28,7 +28,7 @@ class Team(TimestampMixin, Base):
     owner_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id"),
-        nullable=False,
+        nullable=True,
         comment="ID владельца"
     )
     owner = relationship("User", foreign_keys=[owner_id])

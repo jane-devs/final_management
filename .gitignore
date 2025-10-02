@@ -4,3 +4,4 @@ venv
 __pycache__
 app\__pycache__
 *.db
+.claude

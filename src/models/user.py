@@ -51,7 +51,7 @@ class User(Base, SQLAlchemyBaseUserTableUUID):
         onupdate=func.now(),
         comment="Дата обновления"
     )
-    team = relationship("Team", back_populates="members")
+    team = relationship("Team", foreign_keys=[team_id], back_populates="members")
     created_tasks = relationship(
         "Task",
         foreign_keys="Task.creator_id",
