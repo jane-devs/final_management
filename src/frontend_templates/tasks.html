@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Задачи - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Задачи</h1>
+    <a href="/tasks/new" class="btn btn-primary">+ Создать задачу</a>
+</div>
+
+<div class="filters">
+    <form action="/tasks" method="get" class="filter-form">
+        <select name="status">
+            <option value="">Все статусы</option>
+            <option value="open" {% if status == 'open' %}selected{% endif %}>Открыта</option>
+            <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>В работе</option>
+            <option value="completed" {% if status == 'completed' %}selected{% endif %}>Завершена</option>
+        </select>
+
+        <select name="priority">
+            <option value="">Все приоритеты</option>
+            <option value="low" {% if priority == 'low' %}selected{% endif %}>Низкий</option>
+            <option value="medium" {% if priority == 'medium' %}selected{% endif %}>Средний</option>
+            <option value="high" {% if priority == 'high' %}selected{% endif %}>Высокий</option>
+            <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>Срочный</option>
+        </select>
+
+        <button type="submit" class="btn">Применить</button>
+    </form>
+</div>
+
+<div class="task-list">
+    {% if tasks %}
+    {% for task in tasks %}
+    <div class="task-item">
+        <div class="task-info">
+            <h3><a href="/tasks/{{ task.id }}">{{ task.title }}</a></h3>
+            <p>{{ task.description[:150] }}{% if task.description|length > 150 %}...{% endif %}</p>
+            <div class="task-meta">
+                <span class="badge badge-{{ task.status.value }}">{{ task.status.value }}</span>
+                <span class="badge badge-priority-{{ task.priority.value }}">{{ task.priority.value }}</span>
+                {% if task.assignee %}
+                <span>👤 {{ task.assignee.first_name }} {{ task.assignee.last_name }}</span>
+                {% endif %}
+                {% if task.deadline %}
+                <span>📅 {{ task.deadline.strftime('%d.%m.%Y') }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="task-actions">
+            <a href="/tasks/{{ task.id }}" class="btn btn-sm">Открыть</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <p>Задач пока нет</p>
+        <a href="/tasks/new" class="btn btn-primary">Создать первую задачу</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

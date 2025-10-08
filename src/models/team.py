@@ -1,9 +1,17 @@
-from sqlalchemy import Column, String, Text, ForeignKey
+from sqlalchemy import Column, String, Text, ForeignKey, Table, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from core.database import Base
 from .base import TimestampMixin
+
+
+team_members = Table(
+    "team_members",
+    Base.metadata,
+    Column("team_id", Integer, ForeignKey("teams.id"), primary_key=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True),
+)
 
 
 class Team(TimestampMixin, Base):
@@ -32,11 +40,7 @@ class Team(TimestampMixin, Base):
         comment="ID владельца"
     )
     owner = relationship("User", foreign_keys=[owner_id])
-    members = relationship(
-        "User",
-        foreign_keys="User.team_id",
-        back_populates="team"
-    )
+    members = relationship("User", secondary=team_members, back_populates="teams")
     tasks = relationship("Task", back_populates="team")
     meetings = relationship("Meeting", back_populates="team")
 

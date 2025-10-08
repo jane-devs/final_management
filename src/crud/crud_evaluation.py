@@ -1,24 +1,21 @@
 from typing import Optional, List, Dict
 import uuid
-from sqlalchemy import select, func
+from datetime import datetime
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
 from models.evaluation import Evaluation
 from schemas.evaluation import EvaluationCreate, EvaluationUpdate
 from .crud_base import CRUDBase
 
 
 class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
-    """CRUD операции для модели Evaluation"""
-
     async def create_evaluation(
         self,
         session: AsyncSession,
         obj_in: EvaluationCreate,
         evaluator_id: uuid.UUID
     ) -> Evaluation:
-        """Создать оценку."""
         evaluation = Evaluation(
             **obj_in.model_dump(),
             evaluator_id=evaluator_id
@@ -33,7 +30,6 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         session: AsyncSession,
         task_id: int
     ) -> List[Evaluation]:
-        """Получить все оценки задачи."""
         result = await session.execute(
             select(Evaluation).options(
                 selectinload(Evaluation.user),
@@ -50,7 +46,6 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         skip: int = 0,
         limit: int = 100
     ) -> List[Evaluation]:
-        """Получить все оценки пользователя."""
         result = await session.execute(
             select(Evaluation).options(
                 selectinload(Evaluation.user),
@@ -69,7 +64,6 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         skip: int = 0,
         limit: int = 100
     ) -> List[Evaluation]:
-        """Получить все оценки, выставленные пользователем."""
         result = await session.execute(
             select(Evaluation).options(
                 selectinload(Evaluation.user),
@@ -86,7 +80,6 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         session: AsyncSession,
         user_id: uuid.UUID
     ) -> Optional[float]:
-        """Получить среднюю оценку пользователя."""
         result = await session.execute(
             select(func.avg(Evaluation.score)).where(
                 Evaluation.user_id == user_id
@@ -99,7 +92,6 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         session: AsyncSession,
         user_id: uuid.UUID
     ) -> Dict[str, any]:
-        """Получить статистику оценок пользователя."""
         evaluations = await self.get_by_user(session, user_id, limit=1000)
         if not evaluations:
             return {
@@ -127,12 +119,28 @@ class CRUDEvaluation(CRUDBase[Evaluation, EvaluationCreate, EvaluationUpdate]):
         task_id: int,
         user_id: uuid.UUID
     ) -> Optional[Evaluation]:
-        """Проверить, есть ли уже оценка для этой задачи и пользователя."""
         result = await session.execute(
             select(Evaluation).where(
                 Evaluation.task_id == task_id,
                 Evaluation.user_id == user_id
             )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_average_score_by_period(
+        self,
+        session: AsyncSession,
+        user_id: uuid.UUID,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> Optional[float]:
+        conditions = [Evaluation.user_id == user_id]
+        if start_date:
+            conditions.append(Evaluation.created_at >= start_date)
+        if end_date:
+            conditions.append(Evaluation.created_at <= end_date)
+        result = await session.execute(
+            select(func.avg(Evaluation.score)).where(and_(*conditions))
         )
         return result.scalar_one_or_none()
 

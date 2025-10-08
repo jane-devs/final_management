@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{% if team %}Редактировать команду{% else %}Новая команда{% endif %} - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if team %}Редактировать команду{% else %}Новая команда{% endif %}</h1>
+</div>
+
+<div class="form-container">
+    <form action="{% if team %}/teams/{{ team.id }}/edit{% else %}/teams/new{% endif %}" method="post" class="form">
+        <div class="form-group">
+            <label for="name">Название команды</label>
+            <input type="text" id="name" name="name" value="{% if team %}{{ team.name }}{% endif %}" required>
+        </div>
+
+        <div class="form-actions">
+            <a href="/teams" class="btn">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

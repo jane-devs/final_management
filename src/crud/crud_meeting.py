@@ -4,7 +4,6 @@ import uuid
 from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
 from models.meeting import Meeting, meeting_participants
 from models.user import User
 from schemas.meeting import MeetingCreate, MeetingUpdate
@@ -12,26 +11,25 @@ from .crud_base import CRUDBase
 
 
 class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
-    """CRUD операции для модели Meeting"""
-
     async def create_with_participants(
         self,
         session: AsyncSession,
         obj_in: MeetingCreate,
         creator_id: uuid.UUID
     ) -> Meeting:
-        """Создать встречу с участниками."""
         meeting_data = obj_in.model_dump(exclude={"participant_ids"})
         participant_ids = obj_in.participant_ids or []
-        meeting = Meeting(**meeting_data, creator_id=creator_id)
-        session.add(meeting)
-        await session.flush()
+        participants: List[User] = []
         if participant_ids:
-            participants_result = await session.execute(
+            q = await session.execute(
                 select(User).where(User.id.in_(participant_ids))
             )
-            participants = participants_result.scalars().all()
-            meeting.participants = participants
+            participants = q.scalars().all()
+        meeting = Meeting(**meeting_data, creator_id=creator_id)
+        if participants:
+            meeting.participants = participants  # уже загруженные объекты
+        session.add(meeting)
+        await session.flush()
         await session.commit()
         await session.refresh(meeting, ["creator", "participants"])
         return meeting
@@ -43,7 +41,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ) -> List[Meeting]:
-        """Получить встречи команды за период."""
         query = select(Meeting).options(
             selectinload(Meeting.creator),
             selectinload(Meeting.participants)
@@ -64,7 +61,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         end_date: Optional[datetime] = None,
         include_created: bool = True
     ) -> List[Meeting]:
-        """Получить встречи пользователя."""
         query = select(Meeting).options(
             selectinload(Meeting.creator),
             selectinload(Meeting.participants)
@@ -95,7 +91,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         user_id: Optional[uuid.UUID] = None,
         limit: int = 10
     ) -> List[Meeting]:
-        """Получить предстоящие встречи."""
         now = datetime.now()
         query = select(Meeting).options(
             selectinload(Meeting.creator),
@@ -122,7 +117,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         team_id: Optional[int] = None,
         user_id: Optional[uuid.UUID] = None
     ) -> List[Meeting]:
-        """Получить встречи на сегодня."""
         now = datetime.now()
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
@@ -156,7 +150,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         meeting_id: int,
         user_id: uuid.UUID
     ) -> Meeting:
-        """Добавить участника к встрече."""
         meeting = await self.get(
             session, meeting_id, relationships=["participants"]
         )
@@ -177,7 +170,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         meeting_id: int,
         user_id: uuid.UUID
     ) -> Meeting:
-        """Удалить участника из встречи."""
         meeting = await self.get(
             session, meeting_id, relationships=["participants"]
         )
@@ -197,7 +189,6 @@ class CRUDMeeting(CRUDBase[Meeting, MeetingCreate, MeetingUpdate]):
         user_ids: List[uuid.UUID],
         exclude_meeting_id: Optional[int] = None
     ) -> List[Meeting]:
-        """Проверить конфликты по времени для участников."""
         query = select(Meeting).options(
             selectinload(Meeting.participants)
         ).join(

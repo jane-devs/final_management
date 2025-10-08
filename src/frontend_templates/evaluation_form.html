@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Выставить оценку - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>⭐ Выставить оценку</h1>
+</div>
+
+<div class="form-container">
+    <div class="task-info-card">
+        <h3>{{ task.title }}</h3>
+        <p>{{ task.description }}</p>
+        <div class="task-meta">
+            <span class="badge badge-completed">Завершена</span>
+            {% if task.completed_at %}
+            <span>📅 {{ task.completed_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <form action="/evaluations/new" method="post" class="form">
+    <input type="hidden" name="task_id" value="{{ task.id }}">
+    <input type="hidden" name="user_id" value="{{ assignee.id }}">
+
+    <div class="form-group">
+        <label>Оцениваемый сотрудник:</label>
+        <p>{{ assignee.first_name }} {{ assignee.last_name }} ({{ assignee.email }})</p>
+    </div>
+
+    <div class="form-group">
+        <label for="score">Оценка *</label>
+        <div class="score-selector">
+            {% for s in [1,2,3,4,5] %}
+            <label class="score-option">
+                <input type="radio" name="score" value="{{ s }}"
+                       {% if form_data and form_data.score == s %}checked{% endif %}
+                       {% if not form_data and s == 5 %}checked{% endif %}
+                       required>
+                <span class="score-badge score-{{ s }}">{{ s }}</span>
+                <span class="score-description">
+                    {% if s == 5 %}Отлично{% endif %}
+                    {% if s == 4 %}Очень хорошо{% endif %}
+                    {% if s == 3 %}Хорошо{% endif %}
+                    {% if s == 2 %}Удовлетворительно{% endif %}
+                    {% if s == 1 %}Неудовлетворительно{% endif %}
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="comment">Комментарий</label>
+        <textarea id="comment" name="comment" rows="5" placeholder="Комментарий (необязательно)">{% if form_data and form_data.comment %}{{ form_data.comment }}{% endif %}</textarea>
+    </div>
+
+    <div class="form-actions">
+        <a href="/tasks/{{ task.id }}" class="btn">Отмена</a>
+        <button type="submit" class="btn btn-primary">Выставить оценку</button>
+    </div>
+</form>
+</div>
+
+<style>
+.form-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.task-info-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border-left: 4px solid #28a745;
+}
+
+.task-info-card h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.task-info-card p {
+    margin: 10px 0;
+    color: #555;
+}
+
+.task-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.badge-completed {
+    background: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.form {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+.score-selector {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.score-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 10px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.score-option:hover {
+    background: #f8f9fa;
+}
+
+.score-option input[type="radio"] {
+    display: none;
+}
+
+.score-option input[type="radio"]:checked ~ .score-badge {
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.score-option input[type="radio"]:checked ~ .score-description {
+    font-weight: bold;
+    color: #333;
+}
+
+.score-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    transition: all 0.2s;
+}
+
+.score-badge.score-5 { background: #28a745; }
+.score-badge.score-4 { background: #20c997; }
+.score-badge.score-3 { background: #ffc107; color: #333; }
+.score-badge.score-2 { background: #fd7e14; }
+.score-badge.score-1 { background: #dc3545; }
+
+.score-description {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    background: #f8f9fa;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+</style>
+{% endblock %}

@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +7,7 @@ from core.database import get_async_session
 from core.fastapi_users import current_active_user
 from core.dependencies import (
     require_manager_or_admin_role, get_task_with_access_check,
-    get_existing_evaluation, get_evaluation_with_access_check,
+    get_evaluation_with_access_check,
     get_evaluation_with_edit_permission, get_evaluation_with_delete_permission,
     get_existing_task
 )
@@ -19,19 +20,23 @@ from models.evaluation import Evaluation
 from schemas.evaluation import (
     EvaluationCreate, EvaluationRead, EvaluationUpdate
 )
-from utils.crud_evaluation import evaluation_crud
+from crud import evaluation_crud
 
-router = APIRouter(prefix="/evaluations", tags=["evaluations"])
+router = APIRouter(prefix="/evaluations", tags=["Оценки"])
 
 
-@router.post("/", response_model=EvaluationRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=EvaluationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать оценку",
+    description="Создание оценки выполненной задачи (только менеджер/админ)"
+)
 async def create_evaluation(
     evaluation_data: EvaluationCreate,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_manager_or_admin_role)
 ):
-    """Создание оценки выполненной задачи (только менеджер/админ)"""
-    # Проверяем доступ к задаче через зависимость
     task = await get_existing_task(evaluation_data.task_id, session)
 
     if task.status != TaskStatus.COMPLETED:
@@ -62,17 +67,26 @@ async def create_evaluation(
     return evaluation
 
 
-@router.get("/task/{task_id}", response_model=List[EvaluationRead])
+@router.get(
+    "/task/{task_id}",
+    response_model=List[EvaluationRead],
+    summary="Оценки задачи",
+    description="Получение оценок задачи"
+)
 async def get_task_evaluations(
     task: Task = Depends(get_task_with_access_check),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Получение оценок задачи"""
     evaluations = await evaluation_crud.get_by_task(session, task.id)
     return evaluations
 
 
-@router.get("/user/{user_id}", response_model=List[EvaluationRead])
+@router.get(
+    "/user/{user_id}",
+    response_model=List[EvaluationRead],
+    summary="Оценки пользователя",
+    description="Получение оценок пользователя"
+)
 async def get_user_evaluations(
     user_id: str,
     skip: int = Query(0, ge=0),
@@ -80,7 +94,6 @@ async def get_user_evaluations(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение оценок пользователя"""
     if (
         str(current_user.id) != user_id and
             current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]
@@ -95,14 +108,18 @@ async def get_user_evaluations(
     return evaluations
 
 
-@router.get("/my", response_model=List[EvaluationRead])
+@router.get(
+    "/my",
+    response_model=List[EvaluationRead],
+    summary="Мои оценки",
+    description="Получение оценок текущего пользователя"
+)
 async def get_my_evaluations(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение оценок текущего пользователя"""
     evaluations = await evaluation_crud.get_by_user(
         session,
         user_id=current_user.id,
@@ -112,14 +129,18 @@ async def get_my_evaluations(
     return evaluations
 
 
-@router.get("/my-given", response_model=List[EvaluationRead])
+@router.get(
+    "/my-given",
+    response_model=List[EvaluationRead],
+    summary="Выставленные оценки",
+    description="Получение оценок, выставленных текущим пользователем"
+)
 async def get_my_given_evaluations(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_manager_or_admin_role)
 ):
-    """Получение оценок, выставленных текущим пользователем"""
     evaluations = await evaluation_crud.get_by_evaluator(
         session,
         evaluator_id=current_user.id,
@@ -129,13 +150,16 @@ async def get_my_given_evaluations(
     return evaluations
 
 
-@router.get("/user/{user_id}/statistics")
+@router.get(
+    "/user/{user_id}/statistics",
+    summary="Статистика оценок пользователя",
+    description="Получение статистики оценок пользователя"
+)
 async def get_user_evaluation_statistics(
     user_id: str,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение статистики оценок пользователя"""
     if (
         str(current_user.id) != user_id and
             current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]
@@ -148,12 +172,15 @@ async def get_user_evaluation_statistics(
     }
 
 
-@router.get("/my/statistics")
+@router.get(
+    "/my/statistics",
+    summary="Моя статистика оценок",
+    description="Получение статистики оценок текущего пользователя"
+)
 async def get_my_statistics(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение статистики оценок текущего пользователя"""
     stats = await evaluation_crud.get_user_statistics(session, current_user.id)
     return {
         "user_id": str(current_user.id),
@@ -161,15 +188,18 @@ async def get_my_statistics(
     }
 
 
-@router.get("/user/{user_id}/average")
+@router.get(
+    "/user/{user_id}/average",
+    summary="Средняя оценка пользователя",
+    description="Получение средней оценки пользователя"
+)
 async def get_user_average_score(
     user_id: str,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение средней оценки пользователя"""
     if (
-        str(current_user.id) != user_id and 
+        str(current_user.id) != user_id and
             current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]
     ):
         raise PermissionDenied("просматривать чужие оценки")
@@ -180,21 +210,29 @@ async def get_user_average_score(
     }
 
 
-@router.get("/{evaluation_id}", response_model=EvaluationRead)
+@router.get(
+    "/{evaluation_id}",
+    response_model=EvaluationRead,
+    summary="Получить оценку",
+    description="Получение конкретной оценки"
+)
 async def get_evaluation(
     evaluation: Evaluation = Depends(get_evaluation_with_access_check)
 ):
-    """Получение конкретной оценки"""
     return evaluation
 
 
-@router.patch("/{evaluation_id}", response_model=EvaluationRead)
+@router.patch(
+    "/{evaluation_id}",
+    response_model=EvaluationRead,
+    summary="Обновить оценку",
+    description="Обновление оценки (только менеджер/админ)"
+)
 async def update_evaluation(
     evaluation_data: EvaluationUpdate,
     evaluation: Evaluation = Depends(get_evaluation_with_edit_permission),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Обновление оценки (только менеджер/админ)"""
     updated_evaluation = await evaluation_crud.update(
         session,
         db_obj=evaluation,
@@ -207,10 +245,81 @@ async def update_evaluation(
     )
 
 
-@router.delete("/{evaluation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{evaluation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить оценку",
+    description="Удаление оценки (только менеджер/админ)"
+)
 async def delete_evaluation(
     evaluation: Evaluation = Depends(get_evaluation_with_delete_permission),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Удаление оценки (только менеджер/админ)"""
     await evaluation_crud.delete(session, id=evaluation.id)
+
+
+@router.get(
+    "/user/{user_id}/average-by-period",
+    summary="Средняя оценка за период",
+    description="Получение средней оценки пользователя за период"
+)
+async def get_user_average_by_period(
+    user_id: str,
+    start_date: Optional[datetime] = Query(None, description="Начало периода (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="Конец периода (ISO format)"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user)
+):
+    import uuid as uuid_lib
+
+    if (
+        str(current_user.id) != user_id and
+            current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]
+    ):
+        raise PermissionDenied("просматривать чужие оценки")
+
+    try:
+        user_uuid = uuid_lib.UUID(user_id)
+    except ValueError:
+        from core.exceptions import UserNotFound
+        raise UserNotFound(user_id)
+
+    average = await evaluation_crud.get_average_score_by_period(
+        session,
+        user_uuid,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+    return {
+        "user_id": user_id,
+        "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None,
+        "average_score": round(average, 2) if average else 0
+    }
+
+
+@router.get(
+    "/my/average-by-period",
+    summary="Моя средняя оценка за период",
+    description="Получение средней оценки текущего пользователя за период"
+)
+async def get_my_average_by_period(
+    start_date: Optional[datetime] = Query(None, description="Начало периода (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="Конец периода (ISO format)"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user)
+):
+    average = await evaluation_crud.get_average_score_by_period(
+        session,
+        current_user.id,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+    return {
+        "user_id": str(current_user.id),
+        "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None,
+        "average_score": round(average, 2) if average else 0
+    }

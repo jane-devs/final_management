@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Мои оценки - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📊 Мои оценки</h1>
+</div>
+
+<!-- Статистика -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Средний балл</div>
+        <div class="stat-value">{{ "%.2f"|format(statistics.average) }}</div>
+        <div class="stat-description">
+            {% if statistics.average >= 4.5 %}
+            Отлично! ⭐
+            {% elif statistics.average >= 3.5 %}
+            Хорошо 👍
+            {% elif statistics.average >= 2.5 %}
+            Удовлетворительно
+            {% else %}
+            Требуется улучшение
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Всего оценок</div>
+        <div class="stat-value">{{ statistics.total }}</div>
+        <div class="stat-description">задач оценено</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Мин / Макс</div>
+        <div class="stat-value">{{ statistics.min }} / {{ statistics.max }}</div>
+        <div class="stat-description">диапазон оценок</div>
+    </div>
+</div>
+
+<!-- Распределение оценок -->
+{% if statistics.total > 0 %}
+<div class="section">
+    <h2>Распределение оценок</h2>
+    <div class="score-distribution">
+        {% for score in [5, 4, 3, 2, 1] %}
+        <div class="score-bar-container">
+            <div class="score-label">
+                <span class="score-number">{{ score }}</span>
+                <span class="score-name">
+                    {% if score == 5 %}Отлично{% endif %}
+                    {% if score == 4 %}Очень хорошо{% endif %}
+                    {% if score == 3 %}Хорошо{% endif %}
+                    {% if score == 2 %}Удовлетворительно{% endif %}
+                    {% if score == 1 %}Неудовлетворительно{% endif %}
+                </span>
+            </div>
+            <div class="score-bar-wrapper">
+                {% set count = statistics.by_score[score] %}
+                {% set percentage = (count / statistics.total * 100)|int %}
+                <div class="score-bar score-{{ score }}" style="width: {{ percentage }}%"></div>
+                <span class="score-count">{{ count }} ({{ percentage }}%)</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Список последних оценок -->
+<div class="section">
+    <h2>Последние 20 оценок</h2>
+
+    {% if evaluations %}
+    <div class="evaluations-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Задача</th>
+                    <th>Оценка</th>
+                    <th>Оценщик</th>
+                    <th>Комментарий</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evaluation in evaluations %}
+                <tr>
+                    <td>{{ evaluation.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        <a href="/tasks/{{ evaluation.task_id }}">{{ evaluation.task.title if evaluation.task else 'Задача #' ~ evaluation.task_id }}</a>
+                    </td>
+                    <td>
+                        <span class="badge badge-score-{{ evaluation.score }}">
+                            {{ evaluation.score }} - {{ evaluation.score_description }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if evaluation.evaluator %}
+                        {{ evaluation.evaluator.first_name }} {{ evaluation.evaluator.last_name }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if evaluation.comment %}
+                        <span class="evaluation-comment">{{ evaluation.comment[:100] }}{% if evaluation.comment|length > 100 %}...{% endif %}</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>У вас пока нет оценок</p>
+        <p class="text-muted">Оценки появятся после завершения задач</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Статистика */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.stat-description {
+    font-size: 13px;
+    color: #888;
+}
+
+/* Распределение оценок */
+.section {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.score-distribution {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.score-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.score-label {
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.score-number {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    min-width: 25px;
+}
+
+.score-name {
+    font-size: 14px;
+    color: #666;
+}
+
+.score-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.score-bar {
+    height: 30px;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    min-width: 2px;
+}
+
+.score-5 { background: #28a745; }
+.score-4 { background: #20c997; }
+.score-3 { background: #ffc107; }
+.score-2 { background: #fd7e14; }
+.score-1 { background: #dc3545; }
+
+.score-count {
+    font-size: 13px;
+    color: #666;
+    min-width: 80px;
+}
+
+/* Таблица оценок */
+.evaluations-table {
+    overflow-x: auto;
+}
+
+.evaluations-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.evaluations-table th {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.evaluations-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+
+.evaluations-table tr:hover {
+    background: #f8f9fa;
+}
+
+.badge-score-5 { background: #28a745; color: white; }
+.badge-score-4 { background: #20c997; color: white; }
+.badge-score-3 { background: #ffc107; color: #333; }
+.badge-score-2 { background: #fd7e14; color: white; }
+.badge-score-1 { background: #dc3545; color: white; }
+
+.evaluation-comment {
+    font-size: 14px;
+    color: #555;
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-state p {
+    margin: 10px 0;
+}
+
+.text-muted {
+    color: #999;
+}
+</style>
+{% endblock %}

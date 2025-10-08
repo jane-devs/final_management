@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Встречи - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Встречи</h1>
+    <a href="/meetings/new" class="btn btn-primary">+ Создать встречу</a>
+</div>
+
+<div class="meeting-list">
+    {% if meetings %}
+    {% for meeting in meetings %}
+    <div class="meeting-card">
+        <div class="meeting-time">
+            <div class="time-day">{{ meeting.start_time.strftime('%d') }}</div>
+            <div class="time-month">{{ meeting.start_time.strftime('%b') }}</div>
+        </div>
+        <div class="meeting-info">
+            <h3><a href="/meetings/{{ meeting.id }}">{{ meeting.title }}</a></h3>
+            <p>{{ meeting.description[:100] }}{% if meeting.description|length > 100 %}...{% endif %}</p>
+            <div class="meeting-meta">
+                <span>🕐 {{ meeting.start_time.strftime('%H:%M') }} - {{ meeting.end_time.strftime('%H:%M') }}</span>
+                {% if meeting.location %}
+                <span>📍 {{ meeting.location }}</span>
+                {% endif %}
+                <span>👥 {{ meeting.participants|length }} участников</span>
+            </div>
+        </div>
+        <div class="meeting-actions">
+            <a href="/meetings/{{ meeting.id }}" class="btn btn-sm">Открыть</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <p>Встреч пока нет</p>
+        <a href="/meetings/new" class="btn btn-primary">Создать первую встречу</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

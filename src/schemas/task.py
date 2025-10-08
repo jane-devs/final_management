@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from models.task import TaskStatus, TaskPriority
 from .base import TimestampSchema
-from .user import UserRead
 
 
 class TaskBase(BaseModel):
@@ -40,5 +39,3 @@ class TaskRead(TaskBase, TimestampSchema):
     assignee_id: Optional[uuid.UUID] = None
     team_id: int
     completed_at: Optional[datetime] = None
-    creator: Optional[UserRead] = None
-    assignee: Optional[UserRead] = None

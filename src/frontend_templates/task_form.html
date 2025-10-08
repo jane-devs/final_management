@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{% if task %}Редактировать задачу{% else %}Новая задача{% endif %} - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if task %}Редактировать задачу{% else %}Новая задача{% endif %}</h1>
+</div>
+
+<div class="form-container">
+    <form action="{% if task %}/tasks/{{ task.id }}/edit{% else %}/tasks/new{% endif %}" method="post" class="form">
+        <div class="form-group">
+            <label for="title">Название</label>
+            <input type="text" id="title" name="title" value="{% if task %}{{ task.title }}{% endif %}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание</label>
+            <textarea id="description" name="description" rows="5" required>{% if task %}{{ task.description }}{% endif %}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="status">Статус</label>
+                <select id="status" name="status" required>
+                    <option value="open" {% if task and task.status.value == 'open' %}selected{% endif %}>Открыта</option>
+                    <option value="in_progress" {% if task and task.status.value == 'in_progress' %}selected{% endif %}>В работе</option>
+                    <option value="completed" {% if task and task.status.value == 'completed' %}selected{% endif %}>Завершена</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="priority">Приоритет</label>
+                <select id="priority" name="priority" required>
+                    <option value="low" {% if task and task.priority.value == 'low' %}selected{% endif %}>Низкий</option>
+                    <option value="medium" {% if task and task.priority.value == 'medium' %}selected{% endif %}>Средний</option>
+                    <option value="high" {% if task and task.priority.value == 'high' %}selected{% endif %}>Высокий</option>
+                    <option value="urgent" {% if task and task.priority.value == 'urgent' %}selected{% endif %}>Срочный</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="team_id">Команда</label>
+            <select id="team_id" name="team_id" required onchange="this.form.submit()">
+                {% for team in teams %}
+                    <option value="{{ team.id }}"
+                        {% if selected_team and selected_team.id == team.id %}selected{% endif %}>
+                        {{ team.name }}{% if team.owner_id == user.id %} (Владелец){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="assignee_id">Исполнитель</label>
+            <select id="assignee_id" name="assignee_id">
+                <option value="">Не назначен</option>
+                {% if selected_team %}
+                    {% for member in selected_team.members %}
+                        <option value="{{ member.id }}"
+                            {% if task and task.assignee_id == member.id %}selected{% endif %}>
+                            {{ member.first_name }} {{ member.last_name }}
+                        </option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+
+            <div class="form-group">
+                <label for="deadline">Дедлайн</label>
+                <input type="datetime-local" id="deadline" name="deadline"
+                       value="{% if task and task.deadline %}{{ task.deadline.strftime('%Y-%m-%dT%H:%M') }}{% endif %}">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% if task %}/tasks/{{ task.id }}{% else %}/tasks{% endif %}" class="btn">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

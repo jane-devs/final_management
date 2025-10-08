@@ -1,8 +1,8 @@
 """Exception handlers для FastAPI"""
 from fastapi import Request, status
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
 
 from .exceptions import (
     TeamException, AppException, ValidationError,
@@ -97,15 +97,16 @@ async def unauthorized_error_handler(request: Request, exc: UnauthorizedError) -
     )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Обработчик стандартных HTTP исключений"""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": "http_error",
-            "message": exc.detail
-        }
-    )
+async def http_exception_handler(request: Request, exc: FastAPIHTTPException):
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        messages = request.session.get("messages", [])
+        messages.append({"type": "error", "text": exc.detail})
+        request.session["messages"] = messages
+        return RedirectResponse(
+            url=request.headers.get("referer", "/"), status_code=303)
+
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
 
 async def request_validation_exception_handler(

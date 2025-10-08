@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ meeting.title }} - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ meeting.title }}</h1>
+    <div class="header-actions">
+        <a href="/meetings/{{ meeting.id }}/edit" class="btn">Редактировать</a>
+    </div>
+</div>
+
+<div class="meeting-detail">
+    <div class="detail-section">
+        <h3>Описание</h3>
+        <p>{{ meeting.description }}</p>
+    </div>
+
+    <div class="detail-grid">
+        <div class="detail-item">
+            <strong>Дата и время:</strong>
+            <p>{{ meeting.start_time.strftime('%d.%m.%Y %H:%M') }} - {{ meeting.end_time.strftime('%H:%M') }}</p>
+        </div>
+
+        <div class="detail-item">
+            <strong>Место проведения:</strong>
+            <p>{% if meeting.location %}{{ meeting.location }}{% else %}Не указано{% endif %}</p>
+        </div>
+
+        <div class="detail-item">
+            <strong>Организатор:</strong>
+            <p>{{ meeting.creator.first_name }} {{ meeting.creator.last_name }}</p>
+        </div>
+
+        <div class="detail-item">
+            <strong>Участников:</strong>
+            <p>{{ meeting.participants|length }}</p>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h3>Участники</h3>
+        <div class="participant-list">
+            {% for participant in meeting.participants %}
+            <div class="participant-item">
+                <div class="member-avatar">{{ participant.first_name[0] }}{{ participant.last_name[0] }}</div>
+                <span>{{ participant.first_name }} {{ participant.last_name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

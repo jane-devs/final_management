@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - TeamManager{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Добро пожаловать, {{ user.first_name }}!</h1>
+        {% if teams %}
+        <div class="user-teams">
+            <p>Команды:</p>
+            <ul class="team-list-inline">
+                {% for team in teams %}
+                <li>
+                    <a href="/teams/{{ team.id }}">{{ team.name }}</a>
+                    {% if team.owner_id == user.id %}<small>(Владелец)</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <h3>{{ stats.my_tasks }}</h3>
+                <p>Мои задачи</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h3>{{ stats.completed_tasks }}</h3>
+                <p>Завершено</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-content">
+                <h3>{{ stats.upcoming_meetings }}</h3>
+                <p>Встречи</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <h3>{{ stats.team_members }}</h3>
+                <p>Команды</p>
+            </div>
+        </div>
+    </div>
+
+    {% if recent_tasks %}
+    <div class="section">
+        <h2>Недавние задачи</h2>
+        <div class="task-list">
+            {% for task in recent_tasks %}
+            <div class="task-item">
+                <div class="task-info">
+                    <h3>{{ task.title }}</h3>
+                    <p>{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+                    <div class="task-meta">
+                        <span class="badge badge-{{ task.status.value }}">{{ task.status.value }}</span>
+                        <span class="badge badge-priority-{{ task.priority.value }}">{{ task.priority.value }}</span>
+                        {% if task.deadline %}
+                        <span>📅 {{ task.deadline.strftime('%d.%m.%Y') }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <a href="/tasks/{{ task.id }}" class="btn btn-sm">Открыть</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if upcoming_meetings %}
+    <div class="section">
+        <h2>Предстоящие встречи</h2>
+        <div class="meeting-list">
+            {% for meeting in upcoming_meetings %}
+            <div class="meeting-item">
+                <div class="meeting-time">
+                    <div class="time-day">{{ meeting.start_time.strftime('%d') }}</div>
+                    <div class="time-month">{{ meeting.start_time.strftime('%b') }}</div>
+                </div>
+                <div class="meeting-info">
+                    <h3>{{ meeting.title }}</h3>
+                    <p>{{ meeting.start_time.strftime('%H:%M') }} - {{ meeting.end_time.strftime('%H:%M') }}</p>
+                    {% if meeting.location %}
+                    <p>📍 {{ meeting.location }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{% if meeting %}Редактировать встречу{% else %}Новая встреча{% endif %} - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if meeting %}Редактировать встречу{% else %}Новая встреча{% endif %}</h1>
+</div>
+
+<div class="form-container">
+    <form action="{% if meeting %}/meetings/{{ meeting.id }}/edit{% else %}/meetings/new{% endif %}" method="post" class="form">
+        <div class="form-group">
+            <label for="title">Название</label>
+            <input type="text" id="title" name="title" value="{% if meeting %}{{ meeting.title }}{% endif %}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание</label>
+            <textarea id="description" name="description" rows="4">{% if meeting %}{{ meeting.description }}{% endif %}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="start_time">Начало</label>
+                <input type="datetime-local" id="start_time" name="start_time"
+                       value="{% if meeting %}{{ meeting.start_time.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="end_time">Конец</label>
+                <input type="datetime-local" id="end_time" name="end_time"
+                       value="{% if meeting %}{{ meeting.end_time.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="location">Место проведения</label>
+            <input type="text" id="location" name="location" value="{% if meeting %}{{ meeting.location }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+            <label>Участники</label>
+            <div class="checkbox-group">
+                {% for member in team_members %}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="participant_ids" value="{{ member.id }}"
+                           {% if meeting and member in meeting.participants %}checked{% endif %}>
+                    {{ member.first_name }} {{ member.last_name }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="team_id">Команда</label>
+            <select id="team_id" name="team_id" required>
+            {% for team in teams %}
+                <option value="{{ team.id }}">{{ team.name }}{% if team.owner_id == user.id %} (Владелец){% endif %}</option>
+            {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="participant_ids">Участники (Ctrl+Click для множественного выбора)</label>
+            <select id="participant_ids" name="participant_ids" multiple>
+            {% for member in team_members %}
+                <option value="{{ member.id }}">{{ member.first_name }} {{ member.last_name }} ({{ member.email }})</option>
+            {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% if meeting %}/meetings/{{ meeting.id }}{% else %}/meetings{% endif %}" class="btn">Отмена</a>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

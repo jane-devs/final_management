@@ -3,24 +3,18 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
 from models.comment import TaskComment
 from schemas.comment import CommentCreate, CommentUpdate
 from .crud_base import CRUDBase
 
 
 class CRUDComment(CRUDBase[TaskComment, CommentCreate, CommentUpdate]):
-    """CRUD операции для модели TaskComment"""
-
     async def create_comment(
         self,
         session: AsyncSession,
         obj_in: CommentCreate,
         author_id: uuid.UUID
     ) -> TaskComment:
-        """
-        Создать комментарий.
-        """
         comment = TaskComment(
             **obj_in.model_dump(),
             author_id=author_id
@@ -37,9 +31,6 @@ class CRUDComment(CRUDBase[TaskComment, CommentCreate, CommentUpdate]):
         skip: int = 0,
         limit: int = 100
     ) -> List[TaskComment]:
-        """
-        Получить комментарии задачи.
-        """
         result = await session.execute(
             select(TaskComment).options(
                 selectinload(TaskComment.author),
@@ -59,9 +50,6 @@ class CRUDComment(CRUDBase[TaskComment, CommentCreate, CommentUpdate]):
         skip: int = 0,
         limit: int = 100
     ) -> List[TaskComment]:
-        """
-        Получить комментарии автора.
-        """
         result = await session.execute(
             select(TaskComment).options(
                 selectinload(TaskComment.author),
@@ -79,9 +67,6 @@ class CRUDComment(CRUDBase[TaskComment, CommentCreate, CommentUpdate]):
         session: AsyncSession,
         task_id: int
     ) -> int:
-        """
-        Подсчитать количество комментариев к задаче.
-        """
         return await self.count(session, filters={"task_id": task_id})
 
 

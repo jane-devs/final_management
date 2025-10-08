@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Команды - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Команды</h1>
+    <a href="/teams/new" class="btn btn-primary">+ Создать команду</a>
+</div>
+
+{% if teams %}
+  {% for team in teams %}
+  <div class="team-card">
+      <div class="team-header">
+          <h2>{{ team.name }}</h2>
+          <span class="team-role">
+            {% if team.owner_id == user.id %}Владелец{% else %}Участник{% endif %}
+          </span>
+      </div>
+
+      <div class="team-info">
+          <p><strong>Код приглашения:</strong> <code>{{ team.invite_code }}</code></p>
+          <p><strong>Участников:</strong> {{ team.members|length }}</p>
+      </div>
+
+      <div class="team-members">
+          <h3>Участники команды</h3>
+          <div class="member-list">
+              {% for member in team.members %}
+              <div class="member-item">
+                  <div class="member-avatar">{{ member.first_name[0] }}{{ member.last_name[0] }}</div>
+                  <div class="member-info">
+                      <strong>{{ member.first_name }} {{ member.last_name }}</strong>
+                      <p>{{ member.email }}</p>
+                  </div>
+                  {% if team.owner_id == user.id and member.id != user.id %}
+                  <form action="/teams/{{ team.id }}/members/{{ member.id }}/remove" method="post">
+                      <button type="submit" class="btn-icon" title="Удалить">❌</button>
+                  </form>
+                  {% endif %}
+              </div>
+              {% endfor %}
+          </div>
+      </div>
+
+      {% if team.owner_id == user.id %}
+      <div class="team-actions">
+          <a href="/teams/{{ team.id }}/edit" class="btn">Редактировать</a>
+          <form action="/teams/{{ team.id }}/leave" method="post" style="display: inline;">
+              <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены?')">Удалить команду</button>
+          </form>
+      </div>
+      {% else %}
+      <div class="team-actions">
+          <form action="/teams/{{ team.id }}/leave" method="post">
+              <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены?')">Покинуть команду</button>
+          </form>
+      </div>
+      {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>Вы не состоите ни в одной команде</p>
+    <div class="empty-actions">
+        <a href="/teams/new" class="btn btn-primary">Создать команду</a>
+        <a href="/teams/join" class="btn">Присоединиться по коду</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

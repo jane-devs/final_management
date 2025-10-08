@@ -12,7 +12,7 @@ from models.task import Task
 from models.meeting import Meeting
 from models.comment import TaskComment
 from models.evaluation import Evaluation
-from utils.crud_team import team_crud
+from crud import team_crud
 from core.exceptions import (
     TeamNotFound, TeamAccessDenied, TeamOwnershipRequired,
     NotInTeam, PermissionDenied, TaskNotFound, TaskAccessDenied,
@@ -182,9 +182,7 @@ async def get_existing_task(
 ) -> Task:
     """Зависимость для получения существующей задачи"""
     result = await session.execute(
-        select(Task)
-        .options(selectinload(Task.creator), selectinload(Task.assignee))
-        .where(Task.id == task_id)
+        select(Task).where(Task.id == task_id)
     )
     task = result.scalar_one_or_none()
     if not task:

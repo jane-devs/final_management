@@ -4,15 +4,12 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, DeclarativeBase
 
-
 ModelType = TypeVar("ModelType", bound=DeclarativeBase)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    """Базовый CRUD класс с общими операциями."""
-
     def __init__(self, model: Type[ModelType]):
         self.model = model
 
@@ -20,13 +17,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         id: Any,
-        relationships: Optional[List[str]] = None
+        relationships: Optional[list] = None
     ) -> Optional[ModelType]:
-        """Получить объект по ID."""
         query = select(self.model).where(self.model.id == id)
         if relationships:
+            opts = []
             for rel in relationships:
-                query = query.options(selectinload(getattr(self.model, rel)))
+                if isinstance(rel, str):
+                    opts.append(selectinload(getattr(self.model, rel)))
+                else:
+                    opts.append(rel)
+            query = query.options(*opts)
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
@@ -39,7 +40,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filters: Optional[Dict[str, Any]] = None,
         relationships: Optional[List[str]] = None
     ) -> List[ModelType]:
-        """Получить список объектов с пагинацией и фильтрами."""
         query = select(self.model)
         if filters:
             for field, value in filters.items():
@@ -58,7 +58,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj_in: CreateSchemaType,
         **kwargs
     ) -> ModelType:
-        """Создать новый объект."""
         obj_data = obj_in.model_dump()
         obj_data.update(kwargs)
         db_obj = self.model(**obj_data)
@@ -74,7 +73,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: UpdateSchemaType | Dict[str, Any]
     ) -> ModelType:
-        """Обновить объект."""
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
@@ -93,7 +91,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         *,
         id: Any
     ) -> Optional[ModelType]:
-        """Удалить объект по ID."""
         obj = await self.get(session, id)
         if obj:
             await session.delete(obj)
@@ -105,7 +102,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         filters: Optional[Dict[str, Any]] = None
     ) -> int:
-        """Подсчитать количество записей."""
         query = select(func.count()).select_from(self.model)
         if filters:
             for field, value in filters.items():
@@ -119,7 +115,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         id: Any
     ) -> bool:
-        """Проверить существование объекта."""
         query = select(func.count()).select_from(
             self.model).where(self.model.id == id)
         result = await session.execute(query)

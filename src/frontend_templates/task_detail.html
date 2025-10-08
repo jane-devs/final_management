@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ task.title }}</h1>
+    <div class="header-actions">
+        <a href="/tasks/{{ task.id }}/edit" class="btn">Редактировать</a>
+        {% if task.status.value != 'completed' %}
+        <form action="/tasks/{{ task.id }}/complete" method="post" style="display: inline;">
+            <button type="submit" class="btn btn-success">Завершить</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="task-detail">
+    <div class="task-badges">
+        <span class="badge badge-{{ task.status.value }}">{{ task.status.value }}</span>
+        <span class="badge badge-priority-{{ task.priority.value }}">{{ task.priority.value }}</span>
+    </div>
+
+    <div class="detail-section">
+        <h3>Описание</h3>
+        <p>{{ task.description }}</p>
+    </div>
+
+    <div class="detail-grid">
+        <div class="detail-item">
+            <strong>Создатель:</strong>
+            <p>{{ task.creator.first_name }} {{ task.creator.last_name }}</p>
+        </div>
+
+        <div class="detail-item">
+            <strong>Исполнитель:</strong>
+            {% if task.assignee %}
+            <p>{{ task.assignee.first_name }} {{ task.assignee.last_name }}</p>
+            {% else %}
+            <p>Не назначен</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-item">
+            <strong>Дедлайн:</strong>
+            {% if task.deadline %}
+            <p>{{ task.deadline.strftime('%d.%m.%Y %H:%M') }}</p>
+            {% else %}
+            <p>Не установлен</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-item">
+            <strong>Создана:</strong>
+            <p>{{ task.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+        </div>
+    </div>
+
+    {% if task.completed_at %}
+    <div class="detail-section">
+        <strong>Завершена:</strong> {{ task.completed_at.strftime('%d.%m.%Y %H:%M') }}
+    </div>
+    {% endif %}
+
+    {% if task.status.value == 'completed' and user.role.value in ['manager', 'admin'] %}
+    <div class="detail-section">
+        <a href="/evaluations/new?task_id={{ task.id }}" class="btn btn-primary">⭐ Оценить выполнение</a>
+    </div>
+    {% endif %}
+
+    {% if evaluations %}
+    <div class="detail-section">
+        <h3>Оценки ({{ evaluations|length }})</h3>
+        <div class="evaluations-list">
+            {% for evaluation in evaluations %}
+            <div class="evaluation-item">
+                <div class="evaluation-header">
+                    <div>
+                        <strong>{{ evaluation.user.first_name }} {{ evaluation.user.last_name }}</strong>
+                        <span class="badge badge-score-{{ evaluation.score }}">
+                            {{ evaluation.score }} - {{ evaluation.score_description }}
+                        </span>
+                    </div>
+                    <span class="evaluation-date">{{ evaluation.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                {% if evaluation.comment %}
+                <p class="evaluation-comment">{{ evaluation.comment }}</p>
+                {% endif %}
+                <small class="text-muted">
+                    Оценил: {{ evaluation.evaluator.first_name }} {{ evaluation.evaluator.last_name }}
+                </small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="detail-section">
+        <h3>Комментарии</h3>
+        {% if comments %}
+        <div class="comment-list">
+            {% for comment in comments %}
+            <div class="comment">
+                <div class="comment-header">
+                    <strong>{{ comment.author.first_name }} {{ comment.author.last_name }}</strong>
+                    <span class="comment-date">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <p>{{ comment.content }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form action="/tasks/{{ task.id }}/comments" method="post" class="comment-form">
+            <textarea name="content" placeholder="Добавить комментарий..." required></textarea>
+            <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.evaluations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.evaluation-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.evaluation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.evaluation-header > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.evaluation-date {
+    font-size: 13px;
+    color: #666;
+}
+
+.badge-score-5 {
+    background: #28a745;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.badge-score-4 {
+    background: #20c997;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.badge-score-3 {
+    background: #ffc107;
+    color: #333;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.badge-score-2 {
+    background: #fd7e14;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.badge-score-1 {
+    background: #dc3545;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.evaluation-comment {
+    margin: 10px 0;
+    font-style: italic;
+    color: #555;
+}
+
+.text-muted {
+    color: #666;
+    font-size: 13px;
+}
+</style>
+{% endblock %}

@@ -5,3 +5,12 @@ __pycache__
 app\__pycache__
 *.db
 .claude
+src/admin/README.md
+REFACTORING.md
+REFACTORING_SUMMARY.txt
+src/services/README.md
+src/api/frontend_old.py
+src/utils/README.md
+src/crud/README.md
+UTILS_CLEANUP.md
+EVALUATIONS_FRONTEND.md

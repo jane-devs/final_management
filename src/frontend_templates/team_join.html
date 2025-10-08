@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Присоединиться к команде - TeamManager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Присоединиться к команде</h1>
+</div>
+
+<div class="form-container">
+    <form action="/teams/join" method="post" class="form">
+        <div class="form-group">
+            <label for="invite_code">Код приглашения</label>
+            <input type="text" id="invite_code" name="invite_code" placeholder="Введите код приглашения" required>
+            <small>Получите код приглашения у владельца команды</small>
+        </div>
+
+        <div class="form-actions">
+            <a href="/teams" class="btn">Отмена</a>
+            <button type="submit" class="btn btn-primary">Присоединиться</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -54,7 +54,6 @@ class Task(TimestampMixin, Base):
         comment="Приоритет задачи"
     )
 
-    # Временные рамки
     deadline = Column(
         DateTime(timezone=True),
         nullable=True,

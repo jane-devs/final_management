@@ -16,18 +16,29 @@ from core.exceptions import (
 from models.user import User
 from models.meeting import Meeting
 from schemas.meeting import MeetingCreate, MeetingRead, MeetingUpdate
-from utils.crud_meeting import meeting_crud
+from crud import meeting_crud
 
-router = APIRouter(prefix="/meetings", tags=["meetings"])
+router = APIRouter(prefix="/meetings", tags=["Встречи"])
 
 
-@router.post("/", response_model=MeetingRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=MeetingRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать встречу",
+    description="Создание новой встречи (только менеджер или админ)"
+)
 async def create_meeting(
     meeting_data: MeetingCreate,
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_team_member_for_tasks)
 ):
-    """Создание новой встречи"""
+    from models.user import UserRole
+    from core.exceptions import PermissionDenied
+
+    if current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]:
+        raise PermissionDenied("Только менеджеры и администраторы могут создавать встречи")
+
     if meeting_data.team_id != current_user.team_id:
         raise MeetingTeamMismatch()
     if meeting_data.participant_ids:
@@ -47,14 +58,18 @@ async def create_meeting(
     return meeting
 
 
-@router.get("/", response_model=List[MeetingRead])
+@router.get(
+    "/",
+    response_model=List[MeetingRead],
+    summary="Список встреч",
+    description="Получение списка встреч команды"
+)
 async def get_meetings(
     start_date: Optional[datetime] = Query(None, description="Начало периода"),
     end_date: Optional[datetime] = Query(None, description="Конец периода"),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(require_team_member_for_tasks)
 ):
-    """Получение списка встреч команды"""
     meetings = await meeting_crud.get_by_team(
         session,
         team_id=current_user.team_id,
@@ -64,14 +79,18 @@ async def get_meetings(
     return meetings
 
 
-@router.get("/my", response_model=List[MeetingRead])
+@router.get(
+    "/my",
+    response_model=List[MeetingRead],
+    summary="Мои встречи",
+    description="Получение встреч текущего пользователя"
+)
 async def get_my_meetings(
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение встреч текущего пользователя"""
     meetings = await meeting_crud.get_by_user(
         session,
         user_id=current_user.id,
@@ -82,12 +101,51 @@ async def get_my_meetings(
     return meetings
 
 
-@router.get("/today", response_model=List[MeetingRead])
+@router.get(
+    "/user/{user_id}",
+    response_model=List[MeetingRead],
+    summary="Встречи пользователя",
+    description="Получение встреч пользователя по ID (только админ или менеджер)"
+)
+async def get_user_meetings(
+    user_id: str,
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(current_active_user)
+):
+    import uuid as uuid_lib
+    from models.user import UserRole
+    from core.exceptions import PermissionDenied, UserNotFound
+
+    if str(current_user.id) != user_id and current_user.role not in [UserRole.MANAGER, UserRole.ADMIN]:
+        raise PermissionDenied("просматривать встречи других пользователей")
+
+    try:
+        user_uuid = uuid_lib.UUID(user_id)
+    except ValueError:
+        raise UserNotFound(user_id)
+
+    meetings = await meeting_crud.get_by_user(
+        session,
+        user_id=user_uuid,
+        start_date=start_date,
+        end_date=end_date,
+        include_created=True
+    )
+    return meetings
+
+
+@router.get(
+    "/today",
+    response_model=List[MeetingRead],
+    summary="Встречи на сегодня",
+    description="Получение встреч на сегодня"
+)
 async def get_today_meetings(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение встреч на сегодня"""
     meetings = await meeting_crud.get_today(
         session,
         user_id=current_user.id
@@ -95,13 +153,17 @@ async def get_today_meetings(
     return meetings
 
 
-@router.get("/upcoming", response_model=List[MeetingRead])
+@router.get(
+    "/upcoming",
+    response_model=List[MeetingRead],
+    summary="Предстоящие встречи",
+    description="Получение предстоящих встреч"
+)
 async def get_upcoming_meetings(
     limit: int = Query(10, ge=1, le=100),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(current_active_user)
 ):
-    """Получение предстоящих встреч"""
     meetings = await meeting_crud.get_upcoming(
         session,
         user_id=current_user.id,
@@ -110,21 +172,29 @@ async def get_upcoming_meetings(
     return meetings
 
 
-@router.get("/{meeting_id}", response_model=MeetingRead)
+@router.get(
+    "/{meeting_id}",
+    response_model=MeetingRead,
+    summary="Получить встречу",
+    description="Получение конкретной встречи"
+)
 async def get_meeting(
     meeting: Meeting = Depends(get_meeting_with_access_check)
 ):
-    """Получение конкретной встречи"""
     return meeting
 
 
-@router.patch("/{meeting_id}", response_model=MeetingRead)
+@router.patch(
+    "/{meeting_id}",
+    response_model=MeetingRead,
+    summary="Обновить встречу",
+    description="Обновление встречи"
+)
 async def update_meeting(
     meeting_data: MeetingUpdate,
     meeting: Meeting = Depends(get_meeting_with_edit_permission),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Обновление встречи"""
     update_data = meeting_data.model_dump(exclude_unset=True)
     if "start_time" in update_data or "end_time" in update_data:
         new_start = update_data.get("start_time", meeting.start_time)
@@ -157,32 +227,45 @@ async def update_meeting(
     )
 
 
-@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{meeting_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить встречу",
+    description="Удаление встречи"
+)
 async def delete_meeting(
     meeting: Meeting = Depends(get_meeting_with_delete_permission),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Удаление встречи"""
     await meeting_crud.delete(session, id=meeting.id)
 
 
-@router.post("/{meeting_id}/participants/{user_id}", response_model=MeetingRead)
+@router.post(
+    "/{meeting_id}/participants/{user_id}",
+    response_model=MeetingRead,
+    summary="Добавить участника",
+    description="Добавить участника к встрече"
+)
 async def add_participant(
     user_id: str,
     meeting: Meeting = Depends(get_existing_meeting),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Добавить участника к встрече"""
-    updated_meeting = await meeting_crud.add_participant(session, meeting.id, user_id)
+    updated_meeting = await meeting_crud.add_participant(
+        session, meeting.id, user_id)
     return updated_meeting
 
 
-@router.delete("/{meeting_id}/participants/{user_id}", response_model=MeetingRead)
+@router.delete(
+    "/{meeting_id}/participants/{user_id}",
+    response_model=MeetingRead,
+    summary="Удалить участника",
+    description="Удалить участника из встречи"
+)
 async def remove_participant(
     user_id: str,
     meeting: Meeting = Depends(get_existing_meeting),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Удалить участника из встречи"""
     updated_meeting = await meeting_crud.remove_participant(session, meeting.id, user_id)
     return updated_meeting

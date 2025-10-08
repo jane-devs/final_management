@@ -1,9 +1,13 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException
+from starlette.middleware.sessions import SessionMiddleware
+from sqladmin import Admin
 
 from core.config import settings
+from core.database import engine
 from core.exceptions import (
     TeamException, AppException, ValidationError,
     NotFoundError, ForbiddenError, UnauthorizedError,
@@ -19,15 +23,38 @@ from core.exception_handlers import (
     http_exception_handler, request_validation_exception_handler,
     general_exception_handler
 )
-from api import auth, users, teams, tasks, meetings, comments, evaluations
+from api import (
+    auth, users, teams, tasks, meetings,
+    comments, evaluations, calendar
+)
+from api.frontend import router as frontend_router
+from utils.init_superuser import create_superuser
+from admin.auth import authentication_backend
+from admin.views import admin_views
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_superuser()
+    yield
 
 app = FastAPI(
     title="Система управления командой",
     description="MVP для управления командами, задачами и встречами",
     version="0.1.0",
+    lifespan=lifespan
 )
 
-# Настройка CORS
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    session_cookie="session",
+    path="/",
+    same_site="lax",
+    https_only=False
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +62,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+admin = Admin(
+    app=app,
+    engine=engine,
+    authentication_backend=authentication_backend,
+    title="Админ-панель - Управление командой",
+    base_url="/admin"
+)
+
+for view in admin_views:
+    admin.add_view(view)
 
 EXCEPTION_HANDLERS = [
     (TeamException, team_exception_handler),
@@ -57,7 +96,11 @@ for exception_class, handler in EXCEPTION_HANDLERS:
     app.add_exception_handler(exception_class, handler)
 
 
-ROUTERS = [
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.include_router(frontend_router)
+
+API_ROUTERS = [
     auth.router,
     users.router,
     teams.router,
@@ -65,20 +108,11 @@ ROUTERS = [
     meetings.router,
     comments.router,
     evaluations.router,
+    calendar.router,
 ]
 
-for router in ROUTERS:
-    app.include_router(router)
-
-
-@app.get("/")
-async def root():
-    """Корневой эндпоинт"""
-    return {
-        "message": "Team Management System API",
-        "version": "0.1.0",
-        "docs": "/docs"
-    }
+for router in API_ROUTERS:
+    app.include_router(router, prefix="/api")
 
 
 @app.get("/health")
